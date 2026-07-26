@@ -324,6 +324,46 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
+// 7c. ANIMACIÓN DE ESCRITURA (TYPING EFFECT)
+// ==========================================
+const typingTextEl = document.getElementById('typing-text');
+if (typingTextEl) {
+    const phrases = [
+        "para transformar tu negocio",
+        "para expandir tu empresa"
+    ];
+    let phraseIdx = 0;
+    let charIdx = 0;
+    let isDeleting = false;
+    let typingSpeed = 80;
+
+    function type() {
+        const currentPhrase = phrases[phraseIdx];
+        if (isDeleting) {
+            typingTextEl.textContent = currentPhrase.substring(0, charIdx - 1);
+            charIdx--;
+            typingSpeed = 40;
+        } else {
+            typingTextEl.textContent = currentPhrase.substring(0, charIdx + 1);
+            charIdx++;
+            typingSpeed = 80;
+        }
+
+        if (!isDeleting && charIdx === currentPhrase.length) {
+            isDeleting = true;
+            typingSpeed = 2000;
+        } else if (isDeleting && charIdx === 0) {
+            isDeleting = false;
+            phraseIdx = (phraseIdx + 1) % phrases.length;
+            typingSpeed = 500;
+        }
+
+        setTimeout(type, typingSpeed);
+    }
+    setTimeout(type, 1000);
+}
+
+// ==========================================
 // 8. FORZAR SCROLL AL TOPE
 // ==========================================
 window.addEventListener('load', () => {

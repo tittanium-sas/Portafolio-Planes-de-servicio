@@ -11,12 +11,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="portafolio.css">
+    <link rel="stylesheet" href="project.css">
 </head>
 <body>
     <!-- Logo móvil -->
     <div class="mobile-logo" id="mobileLogo">
-        <img src="logo-tittanium.png" alt="Tittanium">
+        <img src="logo.png" alt="Tittanium">
     </div>
 
     <!-- Sidebar -->
@@ -26,7 +26,7 @@
         </button>
         
         <div class="logo">
-            <img src="logo-tittanium.png" alt="Tittanium">
+            <img src="logo.png" alt="Tittanium">
         </div>
         
         <ul class="nav-links">
@@ -64,7 +64,13 @@
         <section id="inicio" class="page active">
             <div class="hero-banner">
                 <div class="hero-content">
-                    <h1>Tecnología poderosa, <span class="highlight">simple e intuitiva</span>.</h1>
+                    <div class="hero-date-badge">
+                        <i class="fa-solid fa-calendar-day"></i>
+                        <span id="hero-date">Fecha de presentación: 26 de Julio de 2026</span>
+                    </div>
+                    <h1>Esta es nuestra propuesta <br><span class="typing-container">
+                        <span class="highlight" id="typing-text"></span><span class="typing-cursor">_</span>
+                    </span></h1>
                     <p>Transformamos lo complejo en algo útil para tu vida y tu negocio. Hablamos tu idioma y solucionamos tus problemas de manera directa.</p>
                     <div class="hero-buttons">
                         <a href="#" class="btn-primary" data-page="servicios">Explorar Servicios <i class="fa-solid fa-arrow-right"></i></a>
@@ -72,10 +78,40 @@
                     </div>
                 </div>
                 <div class="hero-visual">
-                    <div class="rocket-circle">
-                        <i class="fa-solid fa-rocket"></i>
+                    <div class="hero-steps">
+                        <div class="step-card">
+                            <div class="step-num">1</div>
+                            <div class="step-info">
+                                <h3>Evaluación</h3>
+                                <p>Analizamos tus necesidades y definimos el alcance</p>
+                                <span class="step-badge preventa">Preventa</span>
+                            </div>
+                        </div>
+                        <div class="step-card">
+                            <div class="step-num">2</div>
+                            <div class="step-info">
+                                <h3>Planificación</h3>
+                                <p>Diseñamos la arquitectura y plan de trabajo</p>
+                                <span class="step-badge consultoria">Consultoría</span>
+                            </div>
+                        </div>
+                        <div class="step-card">
+                            <div class="step-num">3</div>
+                            <div class="step-info">
+                                <h3>Despliegue</h3>
+                                <p>Implementamos la solución según tu necesidad</p>
+                                <span class="step-badge bolsa">Proyectos</span>
+                            </div>
+                        </div>
+                        <div class="step-card">
+                            <div class="step-num">4</div>
+                            <div class="step-info">
+                                <h3>Acompañamiento</h3>
+                                <p>Mantenimiento, optimización y soporte permanente</p>
+                                <span class="step-badge suscripcion">Suscripción</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="rocket-status">Portafolio 2026</div>
                 </div>
             </div>
             
@@ -1113,7 +1149,7 @@
         </footer>
     </main>
 
-    <script src="portafolio.js"></script>
+    <script src="project.js"></script>
     
     <!-- CTA Flotante WhatsApp -->
     <a href="https://wa.me/573216362185" target="_blank" class="whatsapp-float" title="WhatsApp">
