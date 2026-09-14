@@ -22,12 +22,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        if (window.innerWidth <= 1024) {
-            closeMenu();
+            if ('scrollRestoration' in history) {
+            history.scrollRestoration = 'manual';
+            }
+        if (pageId === 'resumen-inversion') {
+            setTimeout(initResumenInversion, 200);
         }
-        
-        if (pageId === 'servicios') {
-            setTimeout(initChart, 300);
+        if (pageId === 'resumen-inversion') {
+            setTimeout(initEstimacionAzure, 200);
         }
     }
 
@@ -321,6 +323,22 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    // ==========================================
+    // TOGGLE TABLA COMPARATIVA DE PLANES
+    // ==========================================
+    const toggleBtn = document.getElementById('toggleComparisonTableBtn');
+    const tableWrapper = document.getElementById('comparisonTableWrapper');
+    if (toggleBtn && tableWrapper) {
+        toggleBtn.addEventListener('click', () => {
+            const isExpanded = tableWrapper.classList.toggle('expanded');
+            if (isExpanded) {
+                toggleBtn.innerHTML = `Ocultar Detalle <i class="fa-solid fa-chevron-up"></i>`;
+            } else {
+                toggleBtn.innerHTML = `Mostrar Todo <i class="fa-solid fa-chevron-down"></i>`;
+            }
+        });
+    }
 });
 
 // ==========================================
@@ -370,6 +388,234 @@ window.addEventListener('load', () => {
     window.scrollTo(0, 0);
 });
 
-if ('scrollRestoration' in history) {
-    history.scrollRestoration = 'manual';
+// ==========================================
+// 9. RESUMEN INVERSION (graficos agrupados ajustables + tabla totales)
+//    Precios oficiales Azure Retail Prices API - region East US (consumo, pago por uso)
+//    Para agregar un recurso nuevo: añadir un objeto al array RECURSOS.
+// ==========================================
+const RECURSOS = [
+    {
+        id: 'blob',
+        nombre: 'Blob Storage',
+        icono: 'fa-database',
+        capDefecto: 3.3,          // TB (cotizacion del proyecto)
+        capMax: 10,
+        redundancias: {           // USD por GB-mes (East US, consumo, vigente)
+            'LRS': 0.019136,
+            'GRS': 0.0421,
+            'ZRS': 0.0423,
+            'RA-GZRS': 0.05382
+        },
+        sel: 'LRS'
+    },
+    {
+        id: 'files',
+        nombre: 'Azure Files (backup)',
+        icono: 'fa-folder-open',
+        capDefecto: 1.0,
+        capMax: 10,
+        redundancias: {
+            'LRS': 0.0632,
+            'GRS': 0.0647,
+            'ZRS': 0.0647
+        },
+        sel: 'LRS'
+    }
+];
+
+const CFG = {
+    region: 'East US',
+    fechaPrecios: '2026-07',
+    trm: 4100,                 // COP por USD (editable en UI)
+    implementacionCOP: 1700000, // Puesta en marcha (sin IVA en la base; IVA se aplica aparte)
+    iva: 0.19
+};
+
+function fmtCOP(n) {
+    return '$' + Math.round(n).toLocaleString('es-CO');
+}
+function fmtUSD(n) {
+    return 'USD $' + n.toFixed(2);
+}
+
+// Costo mensual de un recurso en COP
+function costoRecursoCOP(rec) {
+    const usdGB = rec.redundancias[rec.sel];
+    const tb = parseFloat(rec.capActual);
+    const usdMes = usdGB * 1024 * tb;       // 1 TB = 1024 GB
+    return usdMes * CFG.trm;
+}
+
+let resumenCharts = {};
+
+function initResumenInversion() {
+    const cont = document.getElementById('recursosContainer');
+    const trmInput = document.getElementById('trmInput');
+    if (!cont) return;
+    if (trmInput) CFG.trm = parseFloat(trmInput.value) || CFG.trm;
+
+    // Estado inicial de capacidad por recurso
+    RECURSOS.forEach(r => { r.capActual = r.capDefecto; });
+
+    function render() {
+        cont.innerHTML = '';
+        RECURSOS.forEach((rec, idx) => {
+            const card = document.createElement('div');
+            card.className = 'dashboard-card recurso-card';
+            const redBtns = Object.keys(rec.redundancias).map(rd =>
+                `<button class="red-btn ${rd === rec.sel ? 'active' : ''}" data-rec="${rec.id}" data-red="${rd}">${rd}</button>`
+            ).join('');
+            card.innerHTML = `
+                <div class="recurso-head">
+                    <h3><i class="fa-solid ${rec.icono}"></i> ${rec.nombre}</h3>
+                    <span class="recurso-cost" id="cost-${rec.id}"></span>
+                </div>
+                <div class="slider-row">
+                    <label>Capacidad: <strong id="capval-${rec.id}">${rec.capActual.toFixed(1)} TB</strong></label>
+                    <input type="range" class="cap-slider" id="slider-${rec.id}" min="0.1" max="${rec.capMax}" step="0.1" value="${rec.capActual}">
+                </div>
+                <div class="red-group">${redBtns}</div>
+                <div class="recurso-chart-wrap"><canvas id="chart-${rec.id}"></canvas></div>
+            `;
+            cont.appendChild(card);
+        });
+
+        // Eventos sliders
+        RECURSOS.forEach(rec => {
+            const sl = document.getElementById('slider-' + rec.id);
+            sl.addEventListener('input', e => {
+                rec.capActual = parseFloat(e.target.value);
+                document.getElementById('capval-' + rec.id).textContent = rec.capActual.toFixed(1) + ' TB';
+                update();
+            });
+        });
+        // Eventos redundancia
+        cont.querySelectorAll('.red-btn').forEach(b => {
+            b.addEventListener('click', () => {
+                const rec = RECURSOS.find(r => r.id === b.dataset.rec);
+                rec.sel = b.dataset.red;
+                update();
+            });
+        });
+
+        update();
+    }
+
+    function update() {
+        // Costos
+        RECURSOS.forEach(rec => {
+            const cost = costoRecursoCOP(rec);
+            const el = document.getElementById('cost-' + rec.id);
+            if (el) el.innerHTML = `${fmtCOP(cost)} <span class="muted">/mes (${fmtUSD(rec.redundancias[rec.sel] * 1024 * rec.capActual)})</span>`;
+            // Marcar boton activo
+            cont.querySelectorAll(`.red-btn[data-rec="${rec.id}"]`).forEach(b => b.classList.toggle('active', b.dataset.red === rec.sel));
+            // Redibujar chart
+            drawRecursoChart(rec);
+        });
+        renderTotals();
+    }
+
+    function drawRecursoChart(rec) {
+        const canvas = document.getElementById('chart-' + rec.id);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const labels = Object.keys(rec.redundancias);
+        const data = labels.map(rd => {
+            const usdMes = rec.redundancias[rd] * 1024 * parseFloat(rec.capActual);
+            return usdMes * CFG.trm;
+        });
+        const colors = labels.map(rd => rd === rec.sel ? '#3d4f39' : '#C9D2C4');
+        if (resumenCharts[rec.id]) resumenCharts[rec.id].destroy();
+        resumenCharts[rec.id] = new Chart(ctx, {
+            type: 'bar',
+            data: { labels, datasets: [{ label: 'Costo mensual (COP)', data, backgroundColor: colors, borderRadius: 6 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { callback: v => fmtCOP(v) } } }
+            }
+        });
+    }
+
+    function renderTotals() {
+        const grid = document.getElementById('totalsGrid');
+        const totalAzure = RECURSOS.reduce((s, r) => s + costoRecursoCOP(r), 0);
+        const implConIVA = CFG.implementacionCOP * (1 + CFG.iva);
+        const mes1 = implConIVA + totalAzure;
+        const mes2 = totalAzure;
+        grid.innerHTML = `
+            <div class="total-item"><span>Recursos en nube (Azure, sin IVA)</span><strong>${fmtCOP(totalAzure)}/mes</strong></div>
+            <div class="total-item"><span>Puesta en marcha (con IVA 19%)</span><strong>${fmtCOP(implConIVA)}</strong></div>
+            <div class="total-item total-mes1"><span><strong>Mes 1</strong> (implementación + nube)</span><strong>${fmtCOP(mes1)}</strong></div>
+            <div class="total-item total-mes2"><span><strong>Mes 2+</strong> (solo nube)</span><strong>${fmtCOP(mes2)}/mes</strong></div>
+        `;
+    }
+
+    // TRM en vivo
+    if (trmInput) {
+        trmInput.addEventListener('input', () => {
+            CFG.trm = parseFloat(trmInput.value) || CFG.trm;
+            update();
+        });
+    }
+
+    render();
+}
+
+// Estimación desde share de Azure Calculator
+function initEstimacionAzure() {
+    const canvas = document.getElementById('estAzureChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    if (window.estAzureChartInstance) {
+        window.estAzureChartInstance.destroy();
+    }
+
+    window.estAzureChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Azure Files', 'Azure Backup', 'Soporte'],
+            datasets: [
+                {
+                    data: [94.57, 18.82, 0],
+                    backgroundColor: ['#3d4f39', '#5a6e55', '#9CA3AF'],
+                    borderWidth: 0
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '68%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 16,
+                        usePointStyle: true,
+                        pointStyleWidth: 8
+                    }
+                }
+            }
+        },
+        plugins: [{
+            id: 'centerText',
+            beforeDraw(chart) {
+                const { ctx, chartArea: { width, height, top, left } } = chart;
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const x = left + width / 2;
+                const y = top + height / 2;
+                ctx.fillStyle = '#111827';
+                ctx.font = 'bold 18px system-ui, -apple-system, Segoe UI, Roboto';
+                ctx.fillText('USD 113.39', x, y - 8);
+                ctx.fillStyle = '#6B7280';
+                ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto';
+                ctx.fillText('por mes', x, y + 14);
+                ctx.restore();
+            }
+        }]
+    });
 }
