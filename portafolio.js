@@ -321,6 +321,22 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    // ==========================================
+    // TOGGLE TABLA COMPARATIVA DE PLANES
+    // ==========================================
+    const toggleBtn = document.getElementById('toggleComparisonTableBtn');
+    const tableWrapper = document.getElementById('comparisonTableWrapper');
+    if (toggleBtn && tableWrapper) {
+        toggleBtn.addEventListener('click', () => {
+            const isExpanded = tableWrapper.classList.toggle('expanded');
+            if (isExpanded) {
+                toggleBtn.innerHTML = 'Ocultar Detalle <i class="fa-solid fa-chevron-up"></i>';
+            } else {
+                toggleBtn.innerHTML = 'Mostrar Todo <i class="fa-solid fa-chevron-down"></i>';
+            }
+        });
+    }
 });
 
 // ==========================================

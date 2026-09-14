@@ -1,0 +1,5 @@
+.worktrees/
+
+# Estado local / temporales
+_vista_previa_*.html
+hermes-verify-*.sh
